@@ -1,0 +1,132 @@
+---
+title: "Practical_Machine_Learning Project"
+output: html_document
+---
+
+
+## 1. Executive Summary
+
+## 2. Problem explanation 
+
+The goal of this project is to :
+
+1.  predict the manner in which they did the exercise. 
+2. This is the "classe" variable in the training set. All other variables can be use as predictor.
+3. It needs to be described how to built prediction model, how to use cross validation, what sample error is expected out, and why the choices was maded. 
+4. It will be used also use prediction model to predict 20 different test cases. 
+
+#### Dataset - HAR
+
+The training data for this project are available here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment. 
+
+## 2. Data Analysis 
+
+#### 2.1 Exploratoty Data Analysis 
+
+##### Data Loading and Cleaning
+
+```{r cache=TRUE,warning=FALSE, message=FALSE} 
+library(UsingR) 
+library(ggplot2) 
+library(caret)
+library(rpart)
+library(randomForest)
+library(Formula)
+# data loading
+training<-read.csv("pml-training.csv",na.strings=c("NA",""))
+
+training<-training[,-1] # Remove the first column that represents a ID Row
+ 
+``` 
+
+- This data have total `r ncol(training)` variables.
+- But several vairabls do not have values(missing values).
+  First we check if we have many problems with columns without data. 
+
+##### Number of coluns with less than 80% of data
+
+```{r,cache=TRUE,warning=FALSE}
+sum((colSums(!is.na(training[,-ncol(training)])) < 0.99*nrow(training)))
+```
+
+- So, we apply our definition of remove columns that most doesn’t have data, before its apply to the model.
+
+```{r,cache=TRUE,warning=FALSE}
+Keep <- c((colSums(!is.na(training[,-ncol(training)])) >=0.9*nrow(training)))
+training   <-  training[,Keep]
+
+```
+
+- New data have `r ncol(training)` variables.
+
+##### Data Sets Partitions Definitions
+
+- Create the data partitions of training and validating data sets from original training data sets.
+
+```{r,cache=TRUE,warning=FALSE}
+set.seed(357)
+inTrain = createDataPartition(training$classe, p=0.60, list=FALSE)
+validating = training[-inTrain,]
+training = training[inTrain,]
+```
+
+#### 2.2 Data Modeling
+
+```{r,cache=TRUE,warning=FALSE}
+modelfit <- randomForest(classe~.,data=training)
+##modelfit <- train(classe~.,data=training,method="rf",prox=TRUE )
+print(modelfit)
+importance(modelfit)
+confusionMatrix(predict(modelfit,validating[,-ncol(validating)]),validating$classe)
+```
+
+## 3. Model Test
+
+Finaly, we prossed with predicting the new values in the testing csv provided, first we apply the same data cleannig operations on it and coerce all columns of Testing data set for the same class of previuos data set.
+
+
+#### 3.1 Apply the Same Transformations between testing and training data
+
+```{r,cache=TRUE,warning=FALSE}
+
+testing<-read.csv("pml-testing.csv",na.strings=c("NA",""))
+testing<-testing[,-1]
+testing <- testing[,Keep]
+testing<- testing[,-ncol(testing)] #remove problem ID
+
+# Coerce testing dataset to same class and strucuture of training dataset 
+class_check <- (sapply(testing, class) == sapply(training, class))
+testing[, !class_check] <- sapply(testing[, !class_check], as.numeric)
+testing <- rbind(training[100, -59] ,testing) 
+testing <-testing[-1,]
+```
+
+#### 3.2 Prediciting with Testing Dataset
+
+```{r,cache=TRUE,warning=FALSE}
+predictions<-predict(modelfit,testing)
+print(predictions)
+```
+
+#### 3.3 Generating Answers Files to Submit for Assignment
+
+```{r,cache=TRUE}
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+pml_write_files(predictions)
+```
+
+Since the greatest accuracy level of our modelo, as expect, all 20th files answers submitted were correct!
