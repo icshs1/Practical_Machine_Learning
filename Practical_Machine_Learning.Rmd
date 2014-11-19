@@ -1,10 +1,17 @@
 ---
 title: "Practical_Machine_Learning Project"
-output: html_document
+output: word_document
 ---
 
 
 ## 1. Executive Summary
+
+This document presents the results of the Practical Machine Learning Peer Assessments in a report using a single R markdown document.
+
+Since I have a data set with to many columns(160) and it needs to make a class prediction, I select a random forests model as a learning method, that’s no need cross-validation or a separate test set to get an unbiased estimate of the test set error. 
+Before apply the dataset to this prediction model, I decide remove all the columns that having less than 80% of data filled, instead try to filled it with some center measure. 
+This model accuracy over validation dataset is equal to 99.9235%. This model promoted a excelente prediction results with testing dataset and generated the 20th files answers to submit for the Assignments. 
+
 
 ## 2. Problem explanation 
 
@@ -34,27 +41,23 @@ The data for this project come from this source: http://groupware.les.inf.puc-ri
 ##### Data Loading and Cleaning
 
 ```{r cache=TRUE,warning=FALSE, message=FALSE} 
-library(UsingR) 
-library(ggplot2) 
 library(caret)
 library(rpart)
 library(randomForest)
 library(Formula)
 # data loading
 training<-read.csv("pml-training.csv",na.strings=c("NA",""))
-
-training<-training[,-1] # Remove the first column that represents a ID Row
- 
+training<-training[,-1] # Remove the first column that represents a ID Row 
 ``` 
 
 - This data have total `r ncol(training)` variables.
 - But several vairabls do not have values(missing values).
   First we check if we have many problems with columns without data. 
 
-##### Number of coluns with less than 80% of data
+##### Number of columns with less than 90% of data
 
 ```{r,cache=TRUE,warning=FALSE}
-sum((colSums(!is.na(training[,-ncol(training)])) < 0.99*nrow(training)))
+sum((colSums(!is.na(training[,-ncol(training)])) < 0.9*nrow(training)))
 ```
 
 - So, we apply our definition of remove columns that most doesn’t have data, before its apply to the model.
@@ -62,7 +65,6 @@ sum((colSums(!is.na(training[,-ncol(training)])) < 0.99*nrow(training)))
 ```{r,cache=TRUE,warning=FALSE}
 Keep <- c((colSums(!is.na(training[,-ncol(training)])) >=0.9*nrow(training)))
 training   <-  training[,Keep]
-
 ```
 
 - New data have `r ncol(training)` variables.
@@ -80,17 +82,39 @@ training = training[inTrain,]
 
 #### 2.2 Data Modeling
 
+I select random forests as a modeling of this project.
+In random forests, there is no need for cross-validation or a separate test set to get an unbiased estimate of the test set error. It is estimated internally, during the execution. So, I proced with the training the model (Random Forest) with the training data set.
+
+Due to extremely long running time with caret’s train function(1 hour>~), randomForest of ` randomForest` package are chosen(~1 min) for this project.
+
+
 ```{r,cache=TRUE,warning=FALSE}
 modelfit <- randomForest(classe~.,data=training)
 ##modelfit <- train(classe~.,data=training,method="rf",prox=TRUE )
 print(modelfit)
-importance(modelfit)
+plot(modelfit)
+#importance(modelfit)
+varImpPlot(modelfit)
+```
+
+You can see figure with the verification of variable importance measures as produced by random Forest.
+
+```{r,cache=TRUE,warning=FALSE}
 confusionMatrix(predict(modelfit,validating[,-ncol(validating)]),validating$classe)
 ```
 
+I confirmed the accurancy at validating data set by calculate it with the following formula:
+
+```{r,cache=TRUE,warning=FALSE}
+accuracy<-c(as.numeric((predict(modelfit,validating[,-ncol(validating)])==validating$classe)))
+accuracy<-sum(accuracy)*100/nrow(validating)
+```
+Model Accuracy as tested over Validation set = `r accuracy`%.
+
+
 ## 3. Model Test
 
-Finaly, we prossed with predicting the new values in the testing csv provided, first we apply the same data cleannig operations on it and coerce all columns of Testing data set for the same class of previuos data set.
+Finaly, I prossed with predicting the new values in the testing csv provided, first I apply the same data cleannig operations on it and coerce all columns of Testing data set for the same class of previuos data set.
 
 
 #### 3.1 Apply the Same Transformations between testing and training data
@@ -129,4 +153,4 @@ pml_write_files = function(x){
 pml_write_files(predictions)
 ```
 
-Since the greatest accuracy level of our modelo, as expect, all 20th files answers submitted were correct!
+Since the greatest accuracy level of my model, as expect, all 20th files answers submitted were correct!
