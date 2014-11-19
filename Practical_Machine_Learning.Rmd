@@ -1,6 +1,6 @@
 ---
 title: "Practical_Machine_Learning Project"
-output: word_document
+output: html_document
 ---
 
 
